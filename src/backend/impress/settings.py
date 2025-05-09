@@ -16,11 +16,7 @@ from socket import gethostbyname, gethostname
 
 from django.utils.translation import gettext_lazy as _
 
-import sentry_sdk
 from configurations import Configuration, values
-from sentry_sdk.integrations.django import DjangoIntegration
-from sentry_sdk.integrations.logging import ignore_logger
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.getenv("DATA_DIR", os.path.join("/", "data"))
@@ -35,7 +31,7 @@ def get_release():
             pyproject_data = tomllib.load(f)
         return pyproject_data["project"]["version"]
     except (FileNotFoundError, KeyError):
-        return "NA"  # Default: not available
+        return "NA"
 
 
 class Base(Configuration):
@@ -51,7 +47,6 @@ class Base(Configuration):
     You may also want to override default configuration by setting the following environment
     variables:
 
-    * SENTRY_DSN
     * DB_NAME
     * DB_HOST
     * DB_PASSWORD
@@ -59,7 +54,7 @@ class Base(Configuration):
     """
 
     DEBUG = False
-    USE_SWAGGER = False
+    USE_SWAGGER = True
 
     API_VERSION = "v1.0"
 
@@ -284,28 +279,63 @@ class Base(Configuration):
         "django.middleware.csrf.CsrfViewMiddleware",
         "django.contrib.auth.middleware.AuthenticationMiddleware",
         "django.contrib.messages.middleware.MessageMiddleware",
+        "crum.CurrentRequestUserMiddleware",
         "dockerflow.django.middleware.DockerflowMiddleware",
     ]
 
+    # Authentication
+    AUTH_USER_MODEL = 'core.User'
+    
+    AUTH_BACKEND_URL = os.environ.get('AUTH_BACKEND_URL', "")
+
+    SIMPLE_JWT = {
+        'ALGORITHM': "RS256",
+        'JWK_URL': f"{AUTH_BACKEND_URL}/auth/.well-known/jwks.json",
+        'USER_ID_CLAIM': os.environ.get('JWT_CLAIM', "id"),
+        'AUTH_TOKEN_CLASSES': ('drf_helper.auth.JWKSAuthToken',),
+        'AUDIENCE':os.environ.get('JWT_AUDIENCE', ""),
+        'ISSUER':os.environ.get('JWT_ISSUER', ""),
+    }
+
     AUTHENTICATION_BACKENDS = [
-        "django.contrib.auth.backends.ModelBackend",
-        "core.authentication.backends.OIDCAuthenticationBackend",
+        'django.contrib.auth.backends.ModelBackend',
+        'django.contrib.auth.backends.RemoteUserBackend',
+    ]
+
+    # Password validation
+    # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
+
+    AUTH_PASSWORD_VALIDATORS = [
+        {
+            'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        },
     ]
 
     # Django applications from the highest priority to the lowest
     INSTALLED_APPS = [
-        # impress
+        "rest_framework",
         "core",
-        "demo",
         "drf_spectacular",
         # Third party apps
         "corsheaders",
-        "django_filters",
+        'rest_framework.authtoken',
+        'django_filters',
+        'django_restql',
+        'safedelete',
         "dockerflow.django",
-        "rest_framework",
         "parler",
         "treebeard",
         "easy_thumbnails",
+        'rest_framework_simplejwt.token_blacklist',
         # Django
         "django.contrib.admin",
         "django.contrib.auth",
@@ -315,9 +345,22 @@ class Base(Configuration):
         "django.contrib.sites",
         "django.contrib.messages",
         "django.contrib.staticfiles",
-        # OIDC third party
-        "mozilla_django_oidc",
     ]
+
+    # SWAGGER SETTINGS
+    SPECTACULAR_SETTINGS = {
+        "TITLE": "Impress API",
+        "DESCRIPTION": "This is the impress API schema.",
+        "VERSION": "1.0.0",
+        "SERVE_INCLUDE_SCHEMA": False,
+        "ENABLE_DJANGO_DEPLOY_CHECK": values.BooleanValue(
+            default=False,
+            environ_name="SPECTACULAR_SETTINGS_ENABLE_DJANGO_DEPLOY_CHECK",
+        ),
+        "COMPONENT_SPLIT_REQUEST": True,
+        "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+        "REDOC_DIST": "SIDECAR",
+    }
 
     # Cache
     CACHES = {
@@ -326,8 +369,7 @@ class Base(Configuration):
 
     REST_FRAMEWORK = {
         "DEFAULT_AUTHENTICATION_CLASSES": (
-            "mozilla_django_oidc.contrib.drf.OIDCAuthentication",
-            "rest_framework.authentication.SessionAuthentication",
+            "drf_helper.auth.CustomJWTAuthentication",
         ),
         "DEFAULT_PARSER_CLASSES": [
             "rest_framework.parsers.JSONParser",
@@ -339,8 +381,13 @@ class Base(Configuration):
             # will generate a form with a field with all possible values of the FK).
             "rest_framework.renderers.JSONRenderer",
         ],
+        'DEFAULT_FILTER_BACKENDS': [
+            'django_filters.rest_framework.DjangoFilterBackend',
+            'rest_framework.filters.OrderingFilter',
+            'rest_framework.filters.SearchFilter',
+        ],
         "EXCEPTION_HANDLER": "core.api.exception_handler",
-        "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+        "DEFAULT_PAGINATION_CLASS": "drf_helper.pagination.StandardResultsPagination",
         "PAGE_SIZE": 20,
         "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
         "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
@@ -356,22 +403,6 @@ class Base(Configuration):
                 environ_prefix=None,
             ),
         },
-    }
-
-    SPECTACULAR_SETTINGS = {
-        "TITLE": "Impress API",
-        "DESCRIPTION": "This is the impress API schema.",
-        "VERSION": "1.0.0",
-        "SERVE_INCLUDE_SCHEMA": False,
-        "ENABLE_DJANGO_DEPLOY_CHECK": values.BooleanValue(
-            default=False,
-            environ_name="SPECTACULAR_SETTINGS_ENABLE_DJANGO_DEPLOY_CHECK",
-        ),
-        "COMPONENT_SPLIT_REQUEST": True,
-        # OTHER SETTINGS
-        "SWAGGER_UI_DIST": "SIDECAR",  # shorthand to use the sidecar instead
-        "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
-        "REDOC_DIST": "SIDECAR",
     }
 
     TRASHBIN_CUTOFF_DAYS = values.Value(
@@ -390,7 +421,6 @@ class Base(Configuration):
     EMAIL_USE_SSL = values.BooleanValue(False)
     EMAIL_FROM = values.Value("from@example.com")
 
-    AUTH_USER_MODEL = "core.User"
     INVITATION_VALIDITY_DURATION = 604800  # 7 days, in seconds
 
     # CORS
@@ -399,8 +429,7 @@ class Base(Configuration):
     CORS_ALLOWED_ORIGINS = values.ListValue([])
     CORS_ALLOWED_ORIGIN_REGEXES = values.ListValue([])
 
-    # Sentry
-    SENTRY_DSN = values.Value(None, environ_name="SENTRY_DSN", environ_prefix=None)
+    # Hilight
 
     # Collaboration
     COLLABORATION_API_URL = values.Value(
@@ -464,128 +493,6 @@ class Base(Configuration):
     SESSION_CACHE_ALIAS = "default"
     SESSION_COOKIE_AGE = 60 * 60 * 12
 
-    # OIDC - Authorization Code Flow
-    OIDC_CREATE_USER = values.BooleanValue(
-        default=True,
-        environ_name="OIDC_CREATE_USER",
-    )
-    OIDC_RP_SIGN_ALGO = values.Value(
-        "RS256", environ_name="OIDC_RP_SIGN_ALGO", environ_prefix=None
-    )
-    OIDC_RP_CLIENT_ID = values.Value(
-        "impress", environ_name="OIDC_RP_CLIENT_ID", environ_prefix=None
-    )
-    OIDC_RP_CLIENT_SECRET = values.Value(
-        None,
-        environ_name="OIDC_RP_CLIENT_SECRET",
-        environ_prefix=None,
-    )
-    OIDC_OP_JWKS_ENDPOINT = values.Value(
-        environ_name="OIDC_OP_JWKS_ENDPOINT", environ_prefix=None
-    )
-    OIDC_OP_AUTHORIZATION_ENDPOINT = values.Value(
-        environ_name="OIDC_OP_AUTHORIZATION_ENDPOINT", environ_prefix=None
-    )
-    OIDC_OP_TOKEN_ENDPOINT = values.Value(
-        None, environ_name="OIDC_OP_TOKEN_ENDPOINT", environ_prefix=None
-    )
-    OIDC_OP_USER_ENDPOINT = values.Value(
-        None, environ_name="OIDC_OP_USER_ENDPOINT", environ_prefix=None
-    )
-    OIDC_OP_LOGOUT_ENDPOINT = values.Value(
-        None, environ_name="OIDC_OP_LOGOUT_ENDPOINT", environ_prefix=None
-    )
-    OIDC_AUTH_REQUEST_EXTRA_PARAMS = values.DictValue(
-        {}, environ_name="OIDC_AUTH_REQUEST_EXTRA_PARAMS", environ_prefix=None
-    )
-    OIDC_RP_SCOPES = values.Value(
-        "openid email", environ_name="OIDC_RP_SCOPES", environ_prefix=None
-    )
-    LOGIN_REDIRECT_URL = values.Value(
-        None, environ_name="LOGIN_REDIRECT_URL", environ_prefix=None
-    )
-    LOGIN_REDIRECT_URL_FAILURE = values.Value(
-        None, environ_name="LOGIN_REDIRECT_URL_FAILURE", environ_prefix=None
-    )
-    LOGOUT_REDIRECT_URL = values.Value(
-        None, environ_name="LOGOUT_REDIRECT_URL", environ_prefix=None
-    )
-    OIDC_USE_NONCE = values.BooleanValue(
-        default=True, environ_name="OIDC_USE_NONCE", environ_prefix=None
-    )
-    OIDC_REDIRECT_REQUIRE_HTTPS = values.BooleanValue(
-        default=False, environ_name="OIDC_REDIRECT_REQUIRE_HTTPS", environ_prefix=None
-    )
-    OIDC_REDIRECT_ALLOWED_HOSTS = values.ListValue(
-        default=[], environ_name="OIDC_REDIRECT_ALLOWED_HOSTS", environ_prefix=None
-    )
-    OIDC_STORE_ID_TOKEN = values.BooleanValue(
-        default=True, environ_name="OIDC_STORE_ID_TOKEN", environ_prefix=None
-    )
-    OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION = values.BooleanValue(
-        default=True,
-        environ_name="OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION",
-        environ_prefix=None,
-    )
-    OIDC_USE_PKCE = values.BooleanValue(
-        default=False, environ_name="OIDC_USE_PKCE", environ_prefix=None
-    )
-    OIDC_PKCE_CODE_CHALLENGE_METHOD = values.Value(
-        default="S256",
-        environ_name="OIDC_PKCE_CODE_CHALLENGE_METHOD",
-        environ_prefix=None,
-    )
-    OIDC_PKCE_CODE_VERIFIER_SIZE = values.IntegerValue(
-        default=64, environ_name="OIDC_PKCE_CODE_VERIFIER_SIZE", environ_prefix=None
-    )
-    OIDC_STORE_ACCESS_TOKEN = values.BooleanValue(
-        default=False, environ_name="OIDC_STORE_ACCESS_TOKEN", environ_prefix=None
-    )
-    OIDC_STORE_REFRESH_TOKEN = values.BooleanValue(
-        default=False, environ_name="OIDC_STORE_REFRESH_TOKEN", environ_prefix=None
-    )
-    OIDC_STORE_REFRESH_TOKEN_KEY = values.Value(
-        default=None,
-        environ_name="OIDC_STORE_REFRESH_TOKEN_KEY",
-        environ_prefix=None,
-    )
-
-    # WARNING: Enabling this setting allows multiple user accounts to share the same email
-    # address. This may cause security issues and is not recommended for production use when
-    # email is activated as fallback for identification (see previous setting).
-    OIDC_ALLOW_DUPLICATE_EMAILS = values.BooleanValue(
-        default=False,
-        environ_name="OIDC_ALLOW_DUPLICATE_EMAILS",
-        environ_prefix=None,
-    )
-
-    USER_OIDC_ESSENTIAL_CLAIMS = values.ListValue(
-        default=[], environ_name="USER_OIDC_ESSENTIAL_CLAIMS", environ_prefix=None
-    )
-
-    OIDC_USERINFO_FULLNAME_FIELDS = values.ListValue(
-        default=values.ListValue(  # retrocompatibility
-            default=["first_name", "last_name"],
-            environ_name="USER_OIDC_FIELDS_TO_FULLNAME",
-            environ_prefix=None,
-        ),
-        environ_name="OIDC_USERINFO_FULLNAME_FIELDS",
-        environ_prefix=None,
-    )
-    OIDC_USERINFO_SHORTNAME_FIELD = values.Value(
-        default=values.Value(  # retrocompatibility
-            default="first_name",
-            environ_name="USER_OIDC_FIELD_TO_SHORTNAME",
-            environ_prefix=None,
-        ),
-        environ_name="OIDC_USERINFO_SHORTNAME_FIELD",
-        environ_prefix=None,
-    )
-
-    ALLOW_LOGOUT_GET_METHOD = values.BooleanValue(
-        default=True, environ_name="ALLOW_LOGOUT_GET_METHOD", environ_prefix=None
-    )
-
     # AI service
     AI_FEATURE_ENABLED = values.BooleanValue(
         default=False, environ_name="AI_FEATURE_ENABLED", environ_prefix=None
@@ -644,7 +551,6 @@ class Base(Configuration):
 
     # Logging
     # We want to make it easy to log to console but by default we log production
-    # to Sentry and don't want to log to console.
     LOGGING = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -725,26 +631,14 @@ class Base(Configuration):
         super().post_setup()
 
         # The SENTRY_DSN setting should be available to activate sentry for an environment
-        if cls.SENTRY_DSN is not None:
-            sentry_sdk.init(
-                dsn=cls.SENTRY_DSN,
-                environment=cls.__name__.lower(),
-                release=get_release(),
-                integrations=[DjangoIntegration()],
-            )
-            sentry_sdk.set_tag("application", "backend")
-
-            # Ignore the logs added by the DockerflowMiddleware
-            ignore_logger("request.summary")
-
-        if (
-            cls.OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION
-            and cls.OIDC_ALLOW_DUPLICATE_EMAILS
-        ):
-            raise ValueError(
-                "Both OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION and "
-                "OIDC_ALLOW_DUPLICATE_EMAILS cannot be set to True simultaneously. "
-            )
+        # if cls.SENTRY_DSN is not None:
+        #     sentry_sdk.init(
+        #         dsn=cls.SENTRY_DSN,
+        #         environment=cls.__name__.lower(),
+        #         release=get_release(),
+        #         integrations=[DjangoIntegration()],
+        #     )
+        #     sentry_sdk.set_tag("application", "backend")
 
 
 class Build(Base):
@@ -808,7 +702,7 @@ class Development(Base):
 
     def __init__(self):
         # pylint: disable=invalid-name
-        self.INSTALLED_APPS += ["django_extensions", "drf_spectacular_sidecar"]
+        self.INSTALLED_APPS += ["django_extensions"]
 
 
 class Test(Base):
@@ -820,10 +714,6 @@ class Test(Base):
     USE_SWAGGER = True
 
     CELERY_TASK_ALWAYS_EAGER = values.BooleanValue(True)
-
-    def __init__(self):
-        # pylint: disable=invalid-name
-        self.INSTALLED_APPS += ["drf_spectacular_sidecar"]
 
 
 class ContinuousIntegration(Test):

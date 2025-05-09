@@ -25,8 +25,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.User
-        fields = ["id", "email", "full_name", "short_name", "language"]
-        read_only_fields = ["id", "email", "full_name", "short_name"]
+        fields = ["id", "email", "full_name", "short_name", "language", "organization_id", "domain"]
+        read_only_fields = ["id", "email", "full_name", "short_name", "organization_id"]
 
 
 class UserLightSerializer(UserSerializer):
@@ -378,9 +378,6 @@ class ServerCreateDocumentSerializer(serializers.Serializer):
     title = serializers.CharField(required=True)
     content = serializers.CharField(required=True)
     # User
-    sub = serializers.CharField(
-        required=True, validators=[models.User.sub_validator], max_length=255
-    )
     email = serializers.EmailField(required=True)
     language = serializers.ChoiceField(
         required=False, choices=lazy(lambda: settings.LANGUAGES, tuple)()
@@ -393,13 +390,11 @@ class ServerCreateDocumentSerializer(serializers.Serializer):
         """Create the document and associate it with the user or send an invitation."""
         language = validated_data.get("language", settings.LANGUAGE_CODE)
 
-        # Get the user on its sub (unique identifier). Default on email if allowed in settings
+        # Get the user on email if allowed in settings
         email = validated_data["email"]
 
         try:
-            user = models.User.objects.get_user_by_sub_or_email(
-                validated_data["sub"], email
-            )
+            user = models.User.objects.get(email=email)
         except models.DuplicateEmailError as err:
             raise serializers.ValidationError({"email": [err.message]}) from err
 

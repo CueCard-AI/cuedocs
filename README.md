@@ -119,12 +119,6 @@ $ make run-backend
 
 **Adding content**
 
-You can create a basic demo site by running:
-
-```shellscript
-$ make demo
-```
-
 Finally, you can check all available Make rules using:
 
 ```shellscript

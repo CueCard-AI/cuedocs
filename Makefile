@@ -81,7 +81,6 @@ bootstrap: \
 	create-env-files \
 	build \
 	migrate \
-	demo \
 	back-i18n-compile \
 	mails-install \
 	mails-build \
@@ -140,11 +139,6 @@ stop: ## stop the development server using Docker
 .PHONY: stop
 
 # -- Backend
-
-demo: ## flush db then create a demo for load testing purpose
-	@$(MAKE) resetdb
-	@$(MANAGE) create_demo
-.PHONY: demo
 
 # Nota bene: Black should come after isort just in case they don't agree...
 lint: ## lint back-end python sources

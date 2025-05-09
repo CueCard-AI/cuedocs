@@ -13,16 +13,7 @@ ACTION_FOR_METHOD_TO_PERMISSION = {
     "children": {"GET": "children_list", "POST": "children_create"},
 }
 
-
-class IsAuthenticated(permissions.BasePermission):
-    """
-    Allows access only to authenticated users. Alternative method checking the presence
-    of the auth token to avoid hitting the database.
-    """
-
-    def has_permission(self, request, view):
-        return bool(request.auth) or request.user.is_authenticated
-
+from rest_framework.permissions import IsAuthenticated
 
 class IsAuthenticatedOrSafe(IsAuthenticated):
     """Allows access to authenticated users (or anonymous users but only on safe methods)."""

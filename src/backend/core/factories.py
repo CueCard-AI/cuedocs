@@ -41,7 +41,6 @@ class UserFactory(factory.django.DjangoModelFactory):
     full_name = factory.Faker("name")
     short_name = factory.Faker("first_name")
     language = factory.fuzzy.FuzzyChoice([lang[0] for lang in settings.LANGUAGES])
-    password = make_password("password")
 
     @factory.post_generation
     def with_owned_document(self, create, extracted, **kwargs):

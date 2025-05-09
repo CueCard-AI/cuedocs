@@ -21,6 +21,7 @@ from django.utils.text import capfirst
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import cache_page
 
+
 import requests
 import rest_framework as drf
 from botocore.exceptions import ClientError
@@ -29,7 +30,7 @@ from rest_framework import response as drf_response
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle
 
-from core import authentication, enums, models
+from core import enums, models
 from core.services.ai_services import AIService
 from core.services.collaboration_services import CollaborationService
 from core.services.config_services import get_footer_json
@@ -668,10 +669,9 @@ class DocumentViewSet(
         return self.get_response_for_queryset(queryset)
 
     @drf.decorators.action(
-        authentication_classes=[authentication.ServerToServerAuthentication],
+        permission_classes=[permissions.IsAuthenticated],
         detail=False,
         methods=["post"],
-        permission_classes=[],
         url_path="create-for-owner",
     )
     @transaction.atomic
@@ -1003,15 +1003,13 @@ class DocumentViewSet(
             {"id": str(duplicated_document.id)}, status=status.HTTP_201_CREATED
         )
 
-    @drf.decorators.action(detail=True, methods=["get"], url_path="versions")
+    @drf.decorators.action(detail=True, methods=["get"], url_path="versions", permission_classes=[permissions.IsAuthenticated],)
     def versions_list(self, request, *args, **kwargs):
         """
         Return the document's versions but only those created after the user got access
         to the document
         """
         user = request.user
-        if not user.is_authenticated:
-            raise drf.exceptions.PermissionDenied("Authentication required.")
 
         # Validate query parameters using dedicated serializer
         serializer = serializers.VersionFilterSerializer(data=request.query_params)
@@ -1428,6 +1426,7 @@ class DocumentAccessViewSet(
     resource_field_name = "document"
     serializer_class = serializers.DocumentAccessSerializer
     is_current_user_owner_or_admin = False
+    swagger_schema = None
 
     def get_queryset(self):
         """Return the queryset according to the action."""
@@ -1721,7 +1720,6 @@ class ConfigView(drf.views.APIView):
             "POSTHOG_KEY",
             "LANGUAGES",
             "LANGUAGE_CODE",
-            "SENTRY_DSN",
         ]
         dict_settings = {}
         for setting in array_settings:
@@ -1729,22 +1727,3 @@ class ConfigView(drf.views.APIView):
                 dict_settings[setting] = getattr(settings, setting)
 
         return drf.response.Response(dict_settings)
-
-
-class FooterView(drf.views.APIView):
-    """API ViewSet for sharing the footer JSON."""
-
-    permission_classes = [AllowAny]
-
-    @method_decorator(cache_page(settings.FRONTEND_FOOTER_VIEW_CACHE_TIMEOUT))
-    def get(self, request):
-        """
-        GET /api/v1.0/footer/
-            Return the footer JSON.
-        """
-        json_footer = (
-            get_footer_json(settings.FRONTEND_URL_JSON_FOOTER)
-            if settings.FRONTEND_URL_JSON_FOOTER
-            else {}
-        )
-        return drf.response.Response(json_footer)
