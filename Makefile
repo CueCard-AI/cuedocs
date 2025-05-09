@@ -49,10 +49,6 @@ COMPOSE_RUN_CROWDIN = $(COMPOSE_RUN) crowdin crowdin
 MANAGE              = $(COMPOSE_RUN_APP) python manage.py
 MAIL_YARN           = $(COMPOSE_RUN) -w /app/src/mail node yarn
 
-# -- Frontend
-PATH_FRONT          = ./src/frontend
-PATH_FRONT_IMPRESS  = $(PATH_FRONT)/apps/impress
-
 # ==============================================================================
 # RULES
 
@@ -91,7 +87,6 @@ build: cache ?= --no-cache
 build: ## build the project containers
 	@$(MAKE) build-backend cache=$(cache)
 	@$(MAKE) build-yjs-provider cache=$(cache)
-	@$(MAKE) build-frontend cache=$(cache)
 .PHONY: build
 
 build-backend: cache ?=
@@ -103,11 +98,6 @@ build-yjs-provider: cache ?=
 build-yjs-provider: ## build the y-provider container
 	@$(COMPOSE) build y-provider $(cache)
 .PHONY: build-yjs-provider
-
-build-frontend: cache ?=
-build-frontend: ## build the frontend container
-	@$(COMPOSE) build frontend $(cache)
-.PHONY: build-frontend
 
 down: ## stop and remove containers, networks, images, and volumes
 	@$(COMPOSE) down
@@ -126,7 +116,6 @@ run-backend: ## Start only the backend application and all needed services
 run: ## start the wsgi (production) and development server
 run: 
 	@$(MAKE) run-backend
-	@$(COMPOSE) up --force-recreate -d frontend
 .PHONY: run
 
 status: ## an alias for "docker compose ps"
@@ -295,33 +284,6 @@ help:
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(GREEN)%-30s$(RESET) %s\n", $$1, $$2}'
 .PHONY: help
 
-# Front
-frontend-development-install: ## install the frontend locally
-	cd $(PATH_FRONT_IMPRESS) && yarn
-.PHONY: frontend-development-install
-
-frontend-lint: ## run the frontend linter
-	cd $(PATH_FRONT) && yarn lint
-.PHONY: frontend-lint
-
-run-frontend-development: ## Run the frontend in development mode
-	@$(COMPOSE) stop frontend
-	cd $(PATH_FRONT_IMPRESS) && yarn dev
-.PHONY: run-frontend-development
-
-frontend-i18n-extract: ## Extract the frontend translation inside a json to be used for crowdin
-	cd $(PATH_FRONT) && yarn i18n:extract
-.PHONY: frontend-i18n-extract
-
-frontend-i18n-generate: ## Generate the frontend json files used for crowdin
-frontend-i18n-generate: \
-	crowdin-download-sources \
-	frontend-i18n-extract
-.PHONY: frontend-i18n-generate
-
-frontend-i18n-compile: ## Format the crowin json files used deploy to the apps
-	cd $(PATH_FRONT) && yarn i18n:deploy
-.PHONY: frontend-i18n-compile
 
 # -- K8S
 build-k8s-cluster: ## build the kubernetes cluster using kind
@@ -336,9 +298,6 @@ bump-packages-version: VERSION_TYPE ?= minor
 bump-packages-version: ## bump the version of the project - VERSION_TYPE can be "major", "minor", "patch"
 	cd ./src/mail && yarn version --no-git-tag-version --$(VERSION_TYPE)
 	cd ./src/frontend/ && yarn version --no-git-tag-version --$(VERSION_TYPE)
-	cd ./src/frontend/apps/e2e/ && yarn version --no-git-tag-version --$(VERSION_TYPE)
-	cd ./src/frontend/apps/impress/ && yarn version --no-git-tag-version --$(VERSION_TYPE)
 	cd ./src/frontend/servers/y-provider/ && yarn version --no-git-tag-version --$(VERSION_TYPE)
 	cd ./src/frontend/packages/eslint-config-impress/ && yarn version --no-git-tag-version --$(VERSION_TYPE)
-	cd ./src/frontend/packages/i18n/ && yarn version --no-git-tag-version --$(VERSION_TYPE)
 .PHONY: bump-packages-version
