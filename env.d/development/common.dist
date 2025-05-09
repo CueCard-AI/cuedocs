@@ -31,23 +31,16 @@ AWS_S3_ACCESS_KEY_ID=impress
 AWS_S3_SECRET_ACCESS_KEY=password
 MEDIA_BASE_URL=http://localhost:8083
 
-# OIDC
-OIDC_OP_JWKS_ENDPOINT=http://nginx:8083/realms/impress/protocol/openid-connect/certs
-OIDC_OP_AUTHORIZATION_ENDPOINT=http://localhost:8083/realms/impress/protocol/openid-connect/auth
-OIDC_OP_TOKEN_ENDPOINT=http://nginx:8083/realms/impress/protocol/openid-connect/token
-OIDC_OP_USER_ENDPOINT=http://nginx:8083/realms/impress/protocol/openid-connect/userinfo
+# AUTH
+## Auth Configuration
+AUTH_BACKEND_URL=""
 
-OIDC_RP_CLIENT_ID=impress
-OIDC_RP_CLIENT_SECRET=ThisIsAnExampleKeyForDevPurposeOnly
-OIDC_RP_SIGN_ALGO=RS256
-OIDC_RP_SCOPES="openid email"
 
-LOGIN_REDIRECT_URL=http://localhost:3000
-LOGIN_REDIRECT_URL_FAILURE=http://localhost:3000
-LOGOUT_REDIRECT_URL=http://localhost:3000
+# JWT Configuration
+JWT_CLAIM=userId
+JWT_AUDIENCE=""
+JWT_ISSUER="" 
 
-OIDC_REDIRECT_ALLOWED_HOSTS=["http://localhost:8083", "http://localhost:3000"]
-OIDC_AUTH_REQUEST_EXTRA_PARAMS={"acr_values": "eidas1"}
 
 # AI
 AI_FEATURE_ENABLED=true
@@ -66,3 +59,11 @@ COLLABORATION_WS_URL=ws://localhost:4444/collaboration/ws/
 FRONTEND_THEME=default
 FRONTEND_FOOTER_FEATURE_ENABLED=True
 FRONTEND_URL_JSON_FOOTER=http://frontend:3000/contents/footer-demo.json
+
+
+## S3 Configuration
+AWS_S3_REGION_NAME=EU
+AWS_S3_BUCKET_NAME=
+AWS_S3_ENDPOINT_URL=
+AWS_S3_SECRET_ACCESS_KEY=
+AWS_S3_ACCESS_KEY_ID=

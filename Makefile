@@ -70,8 +70,7 @@ create-env-files: ## Copy the dist env files to env files
 create-env-files: \
 	env.d/development/common \
 	env.d/development/crowdin \
-	env.d/development/postgresql \
-	env.d/development/kc_postgresql
+	env.d/development/postgresql
 .PHONY: create-env-files
 
 bootstrap: ## Prepare Docker images for the project
@@ -224,9 +223,6 @@ env.d/development/common:
 
 env.d/development/postgresql:
 	cp -n env.d/development/postgresql.dist env.d/development/postgresql
-
-env.d/development/kc_postgresql:
-	cp -n env.d/development/kc_postgresql.dist env.d/development/kc_postgresql
 
 # -- Internationalization
 

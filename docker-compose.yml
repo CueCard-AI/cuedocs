@@ -101,6 +101,18 @@ services:
       y-provider:
         condition: service_started
 
+  y-provider:
+    user: ${DOCKER_USER:-1000}
+    build: 
+      context: .
+      dockerfile: ./src/frontend/servers/y-provider/Dockerfile
+      target: y-provider
+    restart: unless-stopped
+    env_file:
+      - env.d/development/common
+    ports:
+      - "4444:4444"
+
   crowdin:
     image: crowdin/cli:3.16.0
     volumes:
