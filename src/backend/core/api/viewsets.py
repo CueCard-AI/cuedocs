@@ -30,7 +30,7 @@ from rest_framework import response as drf_response
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle
 
-from core import enums, models
+from core import enums, models, authentication
 from core.services.ai_services import AIService
 from core.services.collaboration_services import CollaborationService
 from core.services.config_services import get_footer_json
@@ -669,7 +669,7 @@ class DocumentViewSet(
         return self.get_response_for_queryset(queryset)
 
     @drf.decorators.action(
-        permission_classes=[permissions.IsAuthenticated],
+        authentication_classes=[authentication.ServerToServerAuthentication],
         detail=False,
         methods=["post"],
         url_path="create-for-owner",
