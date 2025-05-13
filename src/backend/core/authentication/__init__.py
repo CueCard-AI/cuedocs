@@ -1,1 +1,1 @@
-from backends import ServerToServerAuthentication
+from .backends import ServerToServerAuthentication
