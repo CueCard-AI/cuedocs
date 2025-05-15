@@ -1,0 +1,39 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+      # Define image URIs
+      - BACKEND_REPO_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_IMAGE_REPO}
+      - Y_PROVIDER_REPO_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${Y_PROVIDER_IMAGE_REPO}
+
+      - BACKEND_IMAGE=$BACKEND_REPO_URI:$IMAGE_TAG
+      - Y_PROVIDER_IMAGE=$Y_PROVIDER_REPO_URI:$IMAGE_TAG
+      - BACKEND_CONTAINER_NAME=app
+      - Y_PROVIDER_CONTAINER_NAME=y-provider
+
+  build:
+    commands:
+      - echo Building backend image...
+      - docker build --target backend-production -t $BACKEND_IMAGE --build-arg DOCKER_USER=$DOCKER_USER .
+
+      - echo Building y-provider image...
+      - docker build -t $Y_PROVIDER_IMAGE --build-arg DOCKER_USER=$DOCKER_USER --target y-provider -f src/frontend/servers/y-provider/Dockerfile .
+
+  post_build:
+    commands:
+      - echo Pushing Docker images to ECR...
+      - docker push $BACKEND_IMAGE
+      - docker push $Y_PROVIDER_IMAGE
+
+      - echo Writing separate image definition files...
+      - printf '[{"name":"%s","imageUri":"%s"}]' $BACKEND_CONTAINER_NAME $BACKEND_IMAGE > backend-imagedefinitions.json
+      - printf '[{"name":"%s","imageUri":"%s"}]' $Y_PROVIDER_CONTAINER_NAME $Y_PROVIDER_IMAGE > y-provider-imagedefinitions.json
+
+artifacts:
+  files:
+    - backend-imagedefinitions.json
+    - y-provider-imagedefinitions.json
