@@ -51,13 +51,19 @@ export const hocusPocusServer = Server.configure({
       }
 
       can_edit = document.abilities.update;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        logger('onConnect: backend error', error.message);
+  } catch (error: unknown) {
+        console.error('[DEBUG] onConnect: Original error object caught:', error); // Use console.error for visibility
+        if (error instanceof Error) {
+          console.error('[DEBUG] onConnect: backend error message:', error.message);
+          if (error.stack) {
+            console.error('[DEBUG] onConnect: backend error stack:', error.stack);
+          }
+        } else {
+          console.error('[DEBUG] onConnect: Caught error is NOT an instance of Error. Type:', typeof error, 'Value:', error);
+        }
+        // The following line creates the error message you ARE seeing logged by Hocuspocus/Node
+        return Promise.reject(new Error('Backend error message: Unauthorized'));
       }
-
-      return Promise.reject(new Error('Backend error: Unauthorized'));
-    }
 
     connection.readOnly = !can_edit;
 
@@ -69,7 +75,17 @@ export const hocusPocusServer = Server.configure({
       const user = await getMe(requestHeaders);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       context.userId = user.id;
-    } catch {}
+    } catch (error: unknown) {
+        console.error('[DEBUG] onConnect: Original error object caught:', error); // Use console.error for visibility
+        if (error instanceof Error) {
+          console.error('[DEBUG] onConnect: backend error message:', error.message);
+          if (error.stack) {
+            console.error('[DEBUG] onConnect: backend error stack:', error.stack);
+          }
+        } else {
+          console.error('[DEBUG] onConnect: Caught error is NOT an instance of Error. Type:', typeof error, 'Value:', error);
+        }
+      }
 
     logger(
       'Connection established on room:',

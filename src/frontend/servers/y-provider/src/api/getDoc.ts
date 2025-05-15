@@ -1,8 +1,9 @@
+import axios, { AxiosRequestConfig } from 'axios';
 import { IncomingHttpHeaders } from 'http';
 
-import axios from 'axios';
-
 import { COLLABORATION_BACKEND_BASE_URL } from '@/env';
+
+import { getCookieValue } from '../helpers';
 
 enum LinkReach {
   RESTRICTED = 'restricted',
@@ -57,15 +58,25 @@ interface Doc {
 export const fetchDocument = async (
   documentName: string,
   requestHeaders: IncomingHttpHeaders,
-) => {
+) : Promise<Doc> => {
+
+  const jwtToken = getCookieValue(requestHeaders.cookie, 'token');
+  const axiosHeaders: Record<string, string> = {};
+  if (requestHeaders.origin && typeof requestHeaders.origin === 'string') {
+    axiosHeaders['Origin'] = requestHeaders.origin;
+  }
+
+  if (jwtToken) {
+    axiosHeaders['Authorization'] = `Bearer ${jwtToken}`;
+  }
+
+  const axiosConfig: AxiosRequestConfig = {
+    headers: axiosHeaders,
+  };
+
   const response = await axios.get<Doc>(
     `${COLLABORATION_BACKEND_BASE_URL}/api/v1.0/documents/${documentName}/`,
-    {
-      headers: {
-        Cookie: requestHeaders['cookie'],
-        Origin: requestHeaders['origin'],
-      },
-    },
+      axiosConfig,
   );
 
   if (response.status !== 200) {

@@ -9,4 +9,4 @@ export const Y_PROVIDER_API_KEY =
 export const PORT = Number(process.env.PORT || 4444);
 export const SENTRY_DSN = process.env.SENTRY_DSN || '';
 export const COLLABORATION_BACKEND_BASE_URL =
-  process.env.COLLABORATION_BACKEND_BASE_URL || 'http://app-dev:8000';
+  process.env.COLLABORATION_BACKEND_BASE_URL || 'http://localhost:8000';

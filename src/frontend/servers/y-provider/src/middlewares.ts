@@ -13,6 +13,9 @@ import { logger } from './utils';
 const VALID_API_KEYS = [COLLABORATION_SERVER_SECRET, Y_PROVIDER_API_KEY];
 const allowedOrigins = COLLABORATION_SERVER_ORIGIN.split(',');
 
+console.log(VALID_API_KEYS);
+console.log(allowedOrigins);
+
 export const corsMiddleware = cors({
   origin: allowedOrigins,
   methods: ['GET', 'POST'],

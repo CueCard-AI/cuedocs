@@ -21,7 +21,6 @@ classifiers = [
 ]
 description = "An application to print markdown to pdf from a set of managed templates."
 keywords = ["Django", "Contacts", "Templates", "RBAC"]
-readme = "README.md"
 requires-python = "<4.0,>=3.10"
 dependencies = [
     "beautifulsoup4==4.13.4",
