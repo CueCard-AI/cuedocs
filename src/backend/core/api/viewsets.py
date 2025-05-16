@@ -1727,3 +1727,13 @@ class ConfigView(drf.views.APIView):
                 dict_settings[setting] = getattr(settings, setting)
 
         return drf.response.Response(dict_settings)
+
+
+class HealthCheckView(drf.views.APIView):
+    """
+    Health Check
+    """
+    swagger_schema = None
+
+    def get(self, request, *args, **kwargs):
+        return drf.response.Response({'status': 'ok'})

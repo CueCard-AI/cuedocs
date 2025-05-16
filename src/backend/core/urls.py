@@ -56,4 +56,5 @@ urlpatterns = [
         ),
     ),
     path(f"api/{settings.API_VERSION}/config/", viewsets.ConfigView.as_view()),
+    path('api/health_check/',viewsets.HealthCheckView.as_view()),
 ]
