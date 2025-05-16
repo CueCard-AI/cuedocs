@@ -32,9 +32,6 @@ services:
       - env.d/development/postgresql
     ports:
       - "8071:8000"
-    volumes:
-      - ./src/backend:/app
-      - ./data/static:/data/static
     depends_on:
         postgresql:
             condition: service_healthy
@@ -51,9 +48,6 @@ services:
     env_file:
       - env.d/development/common
       - env.d/development/postgresql
-    volumes:
-      - ./src/backend:/app
-      - ./data/static:/data/static
     depends_on:
       - app-dev
 
@@ -93,8 +87,6 @@ services:
     image: nginx:1.25
     ports:
       - "8083:8083"
-    volumes:
-      - ./docker/files/etc/nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       app-dev:
         condition: service_started
@@ -115,8 +107,6 @@ services:
 
   crowdin:
     image: crowdin/cli:3.16.0
-    volumes:
-      - ".:/app"
     env_file:
       - env.d/development/crowdin
     user: "${DOCKER_USER:-1000}"
@@ -127,5 +117,3 @@ services:
     user: "${DOCKER_USER:-1000}"
     environment:
       HOME: /tmp 
-    volumes:
-      - ".:/app"
