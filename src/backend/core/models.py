@@ -55,6 +55,9 @@ def get_trashbin_cutoff():
     """
     return timezone.now() - timedelta(days=settings.TRASHBIN_CUTOFF_DAYS)
 
+class DocumentTypeChoices(models.TextChoices):
+    DOCUMENT = 'document', _('Document')
+    PRESENTATION = 'presentation', _('Presentation')
 
 class LinkRoleChoices(models.TextChoices):
     """Defines the possible roles a link can offer on a document."""
@@ -376,6 +379,22 @@ class Document(MP_Node, BaseModel):
 
     title = models.CharField(_("title"), max_length=255, null=True, blank=True)
     excerpt = models.TextField(_("excerpt"), max_length=300, null=True, blank=True)
+    document_type = models.CharField(
+        _("document type"),
+        max_length=40,
+        choices=DocumentTypeChoices.choices,
+        default=DocumentTypeChoices.DOCUMENT,
+        help_text=_("The type of the document, e.g., a regular document or a presentation.")
+    )
+
+    content_preview_base64 = models.TextField(
+        _("content preview base64"),
+        null=True,
+        blank=True,
+        editable=True,
+        help_text=_("Base64 encoded first 4 lines of the document content for preview.")
+    )
+
     link_reach = models.CharField(
         max_length=20,
         choices=LinkReachChoices.choices,
