@@ -92,6 +92,8 @@ services:
         condition: service_started
       y-provider:
         condition: service_started
+    volumes:
+      - ./docker/files/etc/nginx/conf.d:/etc/nginx/conf.d:ro
 
   y-provider:
     user: ${DOCKER_USER:-1000}
@@ -117,3 +119,5 @@ services:
     user: "${DOCKER_USER:-1000}"
     environment:
       HOME: /tmp 
+    volumes:
+      - ".:/app"
