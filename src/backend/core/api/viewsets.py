@@ -1269,6 +1269,18 @@ class DocumentViewSet(
             logger.debug("User '%s' lacks permission for attachment", user)
             raise drf.exceptions.PermissionDenied()
 
+        # Check if the attachment is ready
+        s3_client = default_storage.connection.meta.client
+        bucket_name = default_storage.bucket_name
+        head_resp = s3_client.head_object(Bucket=bucket_name, Key=key)
+        metadata = head_resp.get("Metadata", {})
+
+        if (
+            metadata.get("status", enums.DocumentAttachmentStatus.READY)
+            != enums.DocumentAttachmentStatus.READY
+        ):
+            raise drf.exceptions.PermissionDenied()
+
         # Generate S3 authorization headers using the extracted URL parameters
         request = utils.generate_s3_authorization_headers(key)
 
