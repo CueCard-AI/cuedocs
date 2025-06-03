@@ -1,5 +1,9 @@
 version: 0.2
 
+env:
+  variables:
+    ENV: staging
+
 phases:
   pre_build:
     commands:
@@ -28,7 +32,8 @@ phases:
       - docker build -t $Y_PROVIDER_IMAGE --build-arg DOCKER_USER=$DOCKER_USER --target y-provider -f src/frontend/servers/y-provider/Dockerfile .
 
       - echo Building nginx image...
-      - docker build -t $NGINX_IMAGE -f Dockerfile.nginx .
+      - docker build -t $NGINX_IMAGE --build-arg ENV=$ENV -f Dockerfile.nginx .
+
 
   post_build:
     commands:
