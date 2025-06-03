@@ -1,5 +1,9 @@
 version: 0.2
 
+env:
+  variables:
+    ENV: staging
+
 phases:
   pre_build:
     commands:
@@ -9,11 +13,15 @@ phases:
       # Define image URIs
       - BACKEND_REPO_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_IMAGE_REPO}
       - Y_PROVIDER_REPO_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${Y_PROVIDER_IMAGE_REPO}
+      - NGINX_REPO_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${NGINX_IMAGE_REPO}
 
       - BACKEND_IMAGE=$BACKEND_REPO_URI:$IMAGE_TAG
       - Y_PROVIDER_IMAGE=$Y_PROVIDER_REPO_URI:$IMAGE_TAG
+      - NGINX_IMAGE=$NGINX_REPO_URI:$IMAGE_TAG
       - BACKEND_CONTAINER_NAME=app
       - Y_PROVIDER_CONTAINER_NAME=y-provider
+      - NGINX_CONTAINER_NAME=nginx
+      
 
   build:
     commands:
@@ -23,17 +31,22 @@ phases:
       - echo Building y-provider image...
       - docker build -t $Y_PROVIDER_IMAGE --build-arg DOCKER_USER=$DOCKER_USER --target y-provider -f src/frontend/servers/y-provider/Dockerfile .
 
+      - echo Building nginx image...
+      - docker build -t $NGINX_IMAGE --build-arg ENV=$ENV -f Dockerfile.nginx .
+
   post_build:
     commands:
       - echo Pushing Docker images to ECR...
       - docker push $BACKEND_IMAGE
       - docker push $Y_PROVIDER_IMAGE
+      - docker push $NGINX_IMAGE
 
       - echo Writing separate image definition files...
       - printf '[{"name":"%s","imageUri":"%s"}]' $BACKEND_CONTAINER_NAME $BACKEND_IMAGE > backend-imagedefinitions.json
       - printf '[{"name":"%s","imageUri":"%s"}]' $Y_PROVIDER_CONTAINER_NAME $Y_PROVIDER_IMAGE > y-provider-imagedefinitions.json
-
+      - printf '[{"name":"%s","imageUri":"%s"}]' $NGINX_CONTAINER_NAME $NGINX_IMAGE > nginx-imagedefinitions.json
 artifacts:
   files:
     - backend-imagedefinitions.json
     - y-provider-imagedefinitions.json
+    - nginx-imagedefinitions.json
