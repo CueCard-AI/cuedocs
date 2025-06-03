@@ -1,0 +1,8 @@
+FROM nginx:alpine
+
+COPY docker/files/etc/nginx/conf.d/dev.conf /etc/nginx/conf.d/dev.conf
+
+EXPOSE 80 443
+
+# Start NGINX in the foreground
+CMD ["nginx", "-g", "daemon off;"]
