@@ -34,6 +34,7 @@ phases:
       - echo Building nginx image...
       - docker build -t $NGINX_IMAGE --build-arg ENV=$ENV -f Dockerfile.nginx .
 
+
   post_build:
     commands:
       - echo Pushing Docker images to ECR...
