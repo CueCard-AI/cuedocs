@@ -125,3 +125,44 @@ class JWKSAuthToken(Token):
 
         if self.current_time.timestamp() >= exp:
             raise TokenError(_('Token has expired'))
+
+
+class CookieJWTAuthentication(CustomJWTAuthentication):
+    """
+    Custom JWT authentication that extracts token from cookies instead of Authorization header.
+    Extends CustomJWTAuthentication to reuse the user creation/retrieval logic.
+    """
+    
+    def authenticate(self, request):
+        """
+        Returns a two-tuple of `User` and token if authentication succeeds,
+        or `None` otherwise.
+        """
+        raw_token = self.get_raw_token_from_cookie(request)
+        if raw_token is None:
+            return None
+
+        # Use your existing JWKSAuthToken for validation
+        validated_token = self.get_validated_token(raw_token)
+        
+        # Use the parent class's get_user method
+        user = self.get_user(validated_token)
+        
+        return (user, validated_token)
+
+    def get_raw_token_from_cookie(self, request):
+        """
+        Extract the JWT token from the 'token' cookie.
+        """
+        token = request.COOKIES.get('token')
+        return token.encode('utf-8') if token else None
+
+    def get_validated_token(self, raw_token):
+        """
+        Validates the given raw token using JWKSAuthToken.
+        """
+        try:
+            # Use your existing JWKSAuthToken class for validation
+            return JWKSAuthToken(raw_token.decode('utf-8'), verify=True)
+        except TokenError as e:
+            raise InvalidToken(e.args[0])

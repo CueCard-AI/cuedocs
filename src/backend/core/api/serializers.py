@@ -189,6 +189,8 @@ class ListDocumentSerializer(serializers.ModelSerializer):
             "title",
             "updated_at",
             "user_roles",
+            "document_type",
+            "content_preview_base64"
         ]
         read_only_fields = [
             "id",
@@ -260,6 +262,8 @@ class DocumentSerializer(ListDocumentSerializer):
             "title",
             "updated_at",
             "user_roles",
+            "document_type",
+            "content_preview_base64"
         ]
         read_only_fields = [
             "id",

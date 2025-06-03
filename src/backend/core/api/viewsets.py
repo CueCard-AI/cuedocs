@@ -36,6 +36,7 @@ from core.services.collaboration_services import CollaborationService
 from core.services.config_services import get_footer_json
 from core.utils import extract_attachments, filter_descendants
 
+from drf_helper.auth import CookieJWTAuthentication
 from . import permissions, serializers, utils
 from .filters import DocumentFilter, ListDocumentFilter
 
@@ -1227,7 +1228,12 @@ class DocumentViewSet(
             logger.debug("Failed to extract parameters from subrequest URL: %s", exc)
             raise drf.exceptions.PermissionDenied() from exc
 
-    @drf.decorators.action(detail=False, methods=["get"], url_path="media-auth")
+    @drf.decorators.action(
+        detail=False, 
+        methods=["get"], 
+        url_path="media-auth", 
+        authentication_classes=[CookieJWTAuthentication]
+    )
     def media_auth(self, request, *args, **kwargs):
         """
         This view is used by an Nginx subrequest to control access to a document's
@@ -1269,8 +1275,31 @@ class DocumentViewSet(
             logger.debug("User '%s' lacks permission for attachment", user)
             raise drf.exceptions.PermissionDenied()
 
+        # Check if the attachment is ready
+        s3_client = default_storage.connection.meta.client
+        bucket_name = default_storage.bucket_name
+        head_resp = s3_client.head_object(Bucket=bucket_name, Key=key)
+        metadata = head_resp.get("Metadata", {})
+
+        if (
+            metadata.get("status", enums.DocumentAttachmentStatus.READY)
+            != enums.DocumentAttachmentStatus.READY
+        ):
+            raise drf.exceptions.PermissionDenied()
+
         # Generate S3 authorization headers using the extracted URL parameters
         request = utils.generate_s3_authorization_headers(key)
+
+        # Debug output - like your previous version
+        print(f"Generated S3 request object: {request}")
+        print(f"S3 request URL: {request.url}")
+        print(f"S3 request method: {request.method}")
+        print(f"S3 request headers: {dict(request.headers)}")
+        
+        # Individual headers
+        print(f"Authorization header: {request.headers.get('Authorization', 'MISSING')}")
+        print(f"X-Amz-Date header: {request.headers.get('X-Amz-Date', 'MISSING')}")
+        print(f"X-Amz-Content-SHA256 header: {request.headers.get('X-Amz-Content-SHA256', 'MISSING')}")
 
         return drf.response.Response("authorized", headers=request.headers, status=200)
 
