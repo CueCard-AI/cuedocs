@@ -3,6 +3,16 @@
 # ---- base image to inherit from ----
 FROM python:3.12.6-alpine3.20 AS base
 
+ARG AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+ARG AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+ARG AWS_REGION=${AWS_REGION}
+ARG AWS_SECRETS_MANAGER_SECRET_ID=${AWS_SECRETS_MANAGER_SECRET_ID}
+
+ENV AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+ENV AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+ENV AWS_REGION=${AWS_REGION}
+ENV AWS_SECRETS_MANAGER_SECRET_ID=${AWS_SECRETS_MANAGER_SECRET_ID}
+
 # Upgrade pip to its latest release to speed up dependencies installation
 RUN python -m pip install --upgrade pip setuptools
 
@@ -27,17 +37,6 @@ COPY ./src/backend /builder
 
 RUN mkdir /install && \
   pip install --prefix=/install .
-
-
-# ---- mails ----
-FROM node:20 AS mail-builder
-
-COPY ./src/mail /mail/app
-
-WORKDIR /mail/app
-
-RUN yarn install --frozen-lockfile && \
-    yarn build
 
 
 # ---- static link collector ----
@@ -80,7 +79,8 @@ RUN apk add \
   gdk-pixbuf \
   libffi-dev \
   pango \
-  shared-mime-info
+  shared-mime-info \
+  aws-cli
 
 RUN wget https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types -O /etc/mime.types
 
@@ -152,9 +152,6 @@ USER ${DOCKER_USER}
 
 # Copy statics
 COPY --from=link-collector ${IMPRESS_STATIC_ROOT} ${IMPRESS_STATIC_ROOT}
-
-# Copy impress mails
-COPY --from=mail-builder /mail/backend/core/templates/mail /app/core/templates/mail
 
 # The default command runs gunicorn WSGI server in impress's main module
 CMD ["gunicorn", "-c", "/usr/local/etc/gunicorn/impress.py", "impress.wsgi:application"]
