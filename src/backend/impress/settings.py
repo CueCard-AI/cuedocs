@@ -53,7 +53,9 @@ class Base(Configuration):
     * DB_USER
     """
 
-    DEBUG = False
+    DEBUG = values.Value(
+        None, environ_name="DEBUG", environ_prefix=None
+    )
     USE_SWAGGER = True
 
     API_VERSION = "v1.0"
@@ -286,7 +288,9 @@ class Base(Configuration):
     # Authentication
     AUTH_USER_MODEL = 'core.User'
     
-    AUTH_BACKEND_URL = os.environ.get('AUTH_BACKEND_URL', "")
+    AUTH_BACKEND_URL = values.Value(
+        None, environ_name="AUTH_BACKEND_URL", environ_prefix=None
+    )
 
     SIMPLE_JWT = {
         'ALGORITHM': "RS256",
@@ -450,9 +454,6 @@ class Base(Configuration):
         default=True,
         environ_name="FRONTEND_HOMEPAGE_FEATURE_ENABLED",
         environ_prefix=None,
-    )
-    FRONTEND_URL_JSON_FOOTER = values.Value(
-        None, environ_name="FRONTEND_URL_JSON_FOOTER", environ_prefix=None
     )
     FRONTEND_FOOTER_FEATURE_ENABLED = values.BooleanValue(
         default=False,
