@@ -69,7 +69,7 @@ FROM base AS core
 ENV PYTHONUNBUFFERED=1
 
 # Install required system libs
-RUN apk add \
+RUN apk add --no-cache \
   cairo \
   file \
   font-noto \
@@ -83,7 +83,10 @@ RUN apk add \
   jq \
   musl-dev \
   gcc \
-  python3-dev
+  python3-dev \
+  libc-dev \
+  linux-headers \
+  make
 
 RUN wget https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types -O /etc/mime.types
 
