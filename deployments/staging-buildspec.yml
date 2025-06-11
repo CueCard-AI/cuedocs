@@ -22,15 +22,30 @@ phases:
       - Y_PROVIDER_CONTAINER_NAME=y-provider
       - NGINX_CONTAINER_NAME=nginx
       
-
   build:
     commands:
       - echo Building backend image...
-      - docker build --target backend-production -t $BACKEND_IMAGE --build-arg DOCKER_USER=$DOCKER_USER .
+      - docker build \
+          --target backend-production \
+          -t $BACKEND_IMAGE \
+          --build-arg DOCKER_USER=$DOCKER_USER \
+          --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+          --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+          --build-arg AWS_REGION=$AWS_REGION \
+          --build-arg AWS_SECRETS_MANAGER_SECRET_ID=$AWS_SECRETS_MANAGER_SECRET_ID \
+          .
 
       - echo Building y-provider image...
-      - docker build -t $Y_PROVIDER_IMAGE --build-arg DOCKER_USER=$DOCKER_USER --target y-provider -f src/frontend/servers/y-provider/Dockerfile .
-
+      - docker build \
+          -t $Y_PROVIDER_IMAGE \
+          --build-arg DOCKER_USER=$DOCKER_USER \
+          --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+          --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+          --build-arg AWS_REGION=$AWS_REGION \
+          --build-arg AWS_SECRETS_MANAGER_SECRET_ID=$AWS_SECRETS_MANAGER_SECRET_ID \
+          --target y-provider \
+          -f src/frontend/servers/y-provider/Dockerfile .
+          
       - echo Building nginx image...
       - docker build -t $NGINX_IMAGE --build-arg ENV=$ENV -f Dockerfile.nginx .
 
