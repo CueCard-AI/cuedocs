@@ -92,7 +92,7 @@ COPY ./docker/files/usr/local/bin/entrypoint /usr/local/bin/entrypoint
 RUN chmod g=u /etc/passwd
 
 # Make the entrypoint script executable
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint
 
 
 # Copy installed python dependencies

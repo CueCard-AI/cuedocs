@@ -55,7 +55,7 @@ USER ${DOCKER_USER}
 COPY ./docker/files/usr/local/bin/entrypoint /usr/local/bin/entrypoint
 
 # Make the entrypoint script executable
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint
 
 ENTRYPOINT [ "/usr/local/bin/entrypoint" ]
 
