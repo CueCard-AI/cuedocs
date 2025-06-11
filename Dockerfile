@@ -70,8 +70,10 @@ FROM base AS core
 
 ENV PYTHONUNBUFFERED=1
 
-# Set default home directory for Docker user to prevent AWS CLI permission errors
-ENV HOME=/home/appuser
+# Set unprivileged user info
+ARG DOCKER_USER=appuser
+ENV USER_NAME=${DOCKER_USER}
+ENV HOME=/home/${USER_NAME}
 
 # Install required system libs
 RUN apk add \
@@ -84,14 +86,18 @@ RUN apk add \
   libffi-dev \
   pango \
   shared-mime-info \
-  aws-cli
+  aws-cli \
+  shadow \
+  bash
 
-# Create home directory and ensure it's writable
-RUN mkdir -p $HOME/.aws && chmod -R 700 $HOME
+# Create unprivileged user with home directory
+RUN useradd -m -d ${HOME} ${USER_NAME}
 
-# Set HOME to avoid permission issues with AWS CLI and Python
-ENV AWS_CONFIG_FILE=$HOME/.aws/config
-ENV AWS_SHARED_CREDENTIALS_FILE=$HOME/.aws/credentials
+# Set permissions for .aws dir to avoid permission denied
+RUN mkdir -p ${HOME}/.aws && chown -R ${USER_NAME}:${USER_NAME} ${HOME}
+
+ENV AWS_CONFIG_FILE=${HOME}/.aws/config
+ENV AWS_SHARED_CREDENTIALS_FILE=${HOME}/.aws/credentials
 
 RUN wget https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types -O /etc/mime.types
 
@@ -105,14 +111,12 @@ RUN chmod g=u /etc/passwd
 # Copy installed python dependencies
 COPY --from=back-builder /install /usr/local
 
-# Copy impress application (see .dockerignore)
+# Copy impress application
 COPY ./src/backend /app/
 
 WORKDIR /app
 
-# Generate compiled translation messages
-RUN DJANGO_CONFIGURATION=Build \
-    python manage.py compilemessages
+RUN DJANGO_CONFIGURATION=Build python manage.py compilemessages
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
