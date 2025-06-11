@@ -80,7 +80,10 @@ RUN apk add \
   pango \
   shared-mime-info \
   aws-cli \
-  jq
+  jq \
+  musl-dev \
+  gcc \
+  python3-dev
 
 RUN wget https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types -O /etc/mime.types
 
