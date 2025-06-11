@@ -24,10 +24,6 @@
 #     docker run --rm --env-file env.d/production impress:latest python manage.py migrate
 #
 
-# Exit on error
-set -e
-
-
 echo "🐳(entrypoint) creating user running in the container..."
 if ! whoami > /dev/null 2>&1; then
   if [ -w /etc/passwd ]; then
@@ -36,74 +32,4 @@ if ! whoami > /dev/null 2>&1; then
 fi
 
 echo "🐳(entrypoint) running your command: ${*}"
-
-# Ensure default HOME if not set
-export HOME=${HOME:-/home/default}
-
-# Set AWS config file paths if not already set
-export AWS_CONFIG_FILE=${AWS_CONFIG_FILE:-$HOME/.aws/config}
-export AWS_SHARED_CREDENTIALS_FILE=${AWS_SHARED_CREDENTIALS_FILE:-$HOME/.aws/credentials}
-
-# Create AWS config and credentials files
-mkdir -p "$(dirname "$AWS_CONFIG_FILE")"
-touch "$AWS_CONFIG_FILE" "$AWS_SHARED_CREDENTIALS_FILE"
-chmod 600 "$AWS_CONFIG_FILE" "$AWS_SHARED_CREDENTIALS_FILE"
-
-# Configure AWS CLI
-aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
-aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
-aws configure set default.region "$AWS_REGION"
-
-# Fetch secrets from AWS Secrets Manager
-secrets=$(aws secretsmanager get-secret-value --secret-id "${AWS_SECRETS_MANAGER_SECRET_ID}" --query SecretString --output text --region "${AWS_REGION}")
-
-# Export each environment variable
-export DEBUG=$(echo $secrets | jq -r '.DEBUG')
-export DJANGO_ALLOWED_HOSTS=$(echo $secrets | jq -r '.DJANGO_ALLOWED_HOSTS')
-export DJANGO_SECRET_KEY=$(echo $secrets | jq -r '.DJANGO_SECRET_KEY')
-export DJANGO_SETTINGS_MODULE=$(echo $secrets | jq -r '.DJANGO_SETTINGS_MODULE')
-export DJANGO_SUPERUSER_PASSWORD=$(echo $secrets | jq -r '.DJANGO_SUPERUSER_PASSWORD')
-
-export PYTHONPATH=$(echo $secrets | jq -r '.IMPRESS_BASE_URL')
-export IMPRESS_BASE_URL=$(echo $secrets | jq -r '.IMPRESS_BASE_URL')
-
-# Logging configuration
-export LOGGING_LEVEL_HANDLERS_CONSOLE=$(echo $secrets | jq -r '.LOGGING_LEVEL_HANDLERS_CONSOLE')
-export LOGGING_LEVEL_LOGGERS_ROOT=$(echo $secrets | jq -r '.LOGGING_LEVEL_LOGGERS_ROOT')
-export LOGGING_LEVEL_LOGGERS_APP=$(echo $secrets | jq -r '.LOGGING_LEVEL_LOGGERS_APP')
-
-# S3 configuration
-export STORAGES_STATICFILES_BACKEND=$(echo $secrets | jq -r '.STORAGES_STATICFILES_BACKEND')
-export AWS_S3_BUCKET_NAME=$(echo $secrets | jq -r '.AWS_S3_BUCKET_NAME')
-export AWS_S3_ENDPOINT_URL=$(echo $secrets | jq -r '.AWS_S3_ENDPOINT_URL')
-export AWS_S3_ACCESS_KEY_ID=$(echo $secrets | jq -r '.AWS_S3_ACCESS_KEY_ID')
-export AWS_S3_SECRET_ACCESS_KEY=$(echo $secrets | jq -r '.AWS_S3_SECRET_ACCESS_KEY')
-
-export MEDIA_BASE_URL=$(echo $secrets | jq -r '.MEDIA_BASE_URL')
-
-# Auth configuration
-export AUTH_BACKEND_URL=$(echo $secrets | jq -r '.AUTH_BACKEND_URL')
-export JWT_CLAIM=$(echo $secrets | jq -r '.JWT_CLAIM')
-export JWT_AUDIENCE=$(echo $secrets | jq -r '.JWT_AUDIENCE')
-export JWT_ISSUER=$(echo $secrets | jq -r '.JWT_ISSUER')
-
-# AI configuration
-export AI_FEATURE_ENABLED=$(echo $secrets | jq -r '.AI_FEATURE_ENABLED')
-export AI_BASE_URL=$(echo $secrets | jq -r '.AI_BASE_URL')
-
-# Collaboration configuration
-export COLLABORATION_API_URL=$(echo $secrets | jq -r '.COLLABORATION_API_URL')
-export COLLABORATION_BACKEND_BASE_URL=$(echo $secrets | jq -r '.COLLABORATION_BACKEND_BASE_URL')
-export COLLABORATION_SERVER_ORIGIN=$(echo $secrets | jq -r '.COLLABORATION_SERVER_ORIGIN')
-export COLLABORATION_SERVER_SECRET=$(echo $secrets | jq -r '.COLLABORATION_SERVER_SECRET')
-export COLLABORATION_WS_URL=$(echo $secrets | jq -r '.COLLABORATION_WS_URL')
-
-export FRONTEND_THEME=$(echo $secrets | jq -r '.FRONTEND_THEME')
-export FRONTEND_HOMEPAGE_FEATURE_ENABLED=$(echo $secrets | jq -r '.FRONTEND_HOMEPAGE_FEATURE_ENABLED')
-
-
-printenv
-
-
-# Start the application
 exec "$@"
