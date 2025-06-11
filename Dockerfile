@@ -1,7 +1,7 @@
 # Django impress
 
 # ---- base image to inherit from ----
-FROM public.ecr.aws/docker/library/python:3.12.6-alpine3.20 AS base
+FROM public.ecr.aws/docker/library/python:3.11.9-alpine3.20 AS base
 
 ARG AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 ARG AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
