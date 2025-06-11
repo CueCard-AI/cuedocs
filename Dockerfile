@@ -70,6 +70,9 @@ FROM base AS core
 
 ENV PYTHONUNBUFFERED=1
 
+# Set default home directory for Docker user to prevent AWS CLI permission errors
+ENV HOME=/home/appuser
+
 # Install required system libs
 RUN apk add \
   cairo \
@@ -83,6 +86,13 @@ RUN apk add \
   shared-mime-info \
   aws-cli
 
+# Create home directory and ensure it's writable
+RUN mkdir -p $HOME/.aws && chmod -R 700 $HOME
+
+# Set HOME to avoid permission issues with AWS CLI and Python
+ENV AWS_CONFIG_FILE=$HOME/.aws/config
+ENV AWS_SHARED_CREDENTIALS_FILE=$HOME/.aws/credentials
+
 RUN wget https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types -O /etc/mime.types
 
 # Copy entrypoint
@@ -90,8 +100,6 @@ COPY ./docker/files/usr/local/bin/entrypoint /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint
 
 # Give the "root" group the same permissions as the "root" user on /etc/passwd
-# to allow a user belonging to the root group to add new users; typically the
-# docker user (see entrypoint).
 RUN chmod g=u /etc/passwd
 
 # Copy installed python dependencies
@@ -106,11 +114,7 @@ WORKDIR /app
 RUN DJANGO_CONFIGURATION=Build \
     python manage.py compilemessages
 
-
-# We wrap commands run in this container by the following entrypoint that
-# creates a user on-the-fly with the container user ID (see USER) and root group
-# ID.
-ENTRYPOINT [ "/usr/local/bin/entrypoint" ]
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
 # ---- Development image ----
 FROM core AS backend-development
