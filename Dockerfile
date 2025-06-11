@@ -91,13 +91,11 @@ RUN apk add \
   bash
 
 # Create unprivileged user with home directory
-RUN useradd -m -d ${HOME} ${USER_NAME}
+#RUN useradd -m -d ${HOME} ${USER_NAME}
 
-# Set permissions for .aws dir to avoid permission denied
-RUN mkdir -p ${HOME}/.aws && chown -R ${USER_NAME}:${USER_NAME} ${HOME}
-
-ENV AWS_CONFIG_FILE=${HOME}/.aws/config
-ENV AWS_SHARED_CREDENTIALS_FILE=${HOME}/.aws/credentials
+# Create user with UID 1000 but username appuser
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser -h /home/appuser appuser
 
 RUN wget https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types -O /etc/mime.types
 
