@@ -3,17 +3,6 @@
 # ---- base image to inherit from ----
 FROM python:3.11.9-alpine3.20 AS base
 
-
-ARG AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-ARG AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-ARG AWS_REGION=${AWS_REGION}
-ARG AWS_SECRETS_MANAGER_SECRET_ID=${AWS_SECRETS_MANAGER_SECRET_ID}
-
-ENV AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-ENV AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-ENV AWS_REGION=${AWS_REGION}
-ENV AWS_SECRETS_MANAGER_SECRET_ID=${AWS_SECRETS_MANAGER_SECRET_ID}
-
 # Upgrade pip to its latest release to speed up dependencies installation
 RUN python -m pip install --upgrade pip setuptools
 
@@ -38,6 +27,17 @@ COPY ./src/backend /builder
 
 RUN mkdir /install && \
   pip install --prefix=/install .
+
+
+# ---- mails ----
+FROM node:20 AS mail-builder
+
+COPY ./src/mail /mail/app
+
+WORKDIR /mail/app
+
+RUN yarn install --frozen-lockfile && \
+    yarn build
 
 
 # ---- static link collector ----
@@ -70,11 +70,6 @@ FROM base AS core
 
 ENV PYTHONUNBUFFERED=1
 
-# Set unprivileged user info
-ARG DOCKER_USER=appuser
-ENV USER_NAME=${DOCKER_USER}
-ENV HOME=/home/${USER_NAME}
-
 # Install required system libs
 RUN apk add \
   cairo \
@@ -85,19 +80,7 @@ RUN apk add \
   gdk-pixbuf \
   libffi-dev \
   pango \
-  shared-mime-info \
-  aws-cli \
-  shadow \
-  bash
-
-# Create unprivileged user with home directory
-RUN useradd -m -d ${HOME} ${USER_NAME}
-
-# Set permissions for .aws dir to avoid permission denied
-RUN mkdir -p ${HOME}/.aws && chown -R ${USER_NAME}:${USER_NAME} ${HOME}
-
-ENV AWS_CONFIG_FILE=${HOME}/.aws/config
-ENV AWS_SHARED_CREDENTIALS_FILE=${HOME}/.aws/credentials
+  shared-mime-info
 
 RUN wget https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types -O /etc/mime.types
 
@@ -106,19 +89,28 @@ COPY ./docker/files/usr/local/bin/entrypoint /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint
 
 # Give the "root" group the same permissions as the "root" user on /etc/passwd
+# to allow a user belonging to the root group to add new users; typically the
+# docker user (see entrypoint).
 RUN chmod g=u /etc/passwd
 
 # Copy installed python dependencies
 COPY --from=back-builder /install /usr/local
 
-# Copy impress application
+# Copy impress application (see .dockerignore)
 COPY ./src/backend /app/
 
 WORKDIR /app
 
-RUN DJANGO_CONFIGURATION=Build python manage.py compilemessages
+# Generate compiled translation messages
+RUN DJANGO_CONFIGURATION=Build \
+    python manage.py compilemessages
 
-ENTRYPOINT ["/usr/local/bin/entrypoint"]
+
+# We wrap commands run in this container by the following entrypoint that
+# creates a user on-the-fly with the container user ID (see USER) and root group
+# ID.
+
+ENTRYPOINT [ "/usr/local/bin/entrypoint" ]
 
 # ---- Development image ----
 FROM core AS backend-development
@@ -161,6 +153,9 @@ USER ${DOCKER_USER}
 
 # Copy statics
 COPY --from=link-collector ${IMPRESS_STATIC_ROOT} ${IMPRESS_STATIC_ROOT}
+
+# Copy impress mails
+COPY --from=mail-builder /mail/backend/core/templates/mail /app/core/templates/mail
 
 # The default command runs gunicorn WSGI server in impress's main module
 CMD ["gunicorn", "-c", "/usr/local/etc/gunicorn/impress.py", "impress.wsgi:application"]
