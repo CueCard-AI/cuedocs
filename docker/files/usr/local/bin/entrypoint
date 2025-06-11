@@ -49,6 +49,7 @@ secrets=$(aws secretsmanager get-secret-value --secret-id "${AWS_SECRETS_MANAGER
 # Export each environment variable
 export DEBUG=$(echo $secrets | jq -r '.DEBUG')
 export DJANGO_ALLOWED_HOSTS=$(echo $secrets | jq -r '.DJANGO_ALLOWED_HOSTS')
+export SECRET_KEY=$(echo $secrets | jq -r '.SECRET_KEY')
 export DJANGO_SECRET_KEY=$(echo $secrets | jq -r '.DJANGO_SECRET_KEY')
 export DJANGO_SETTINGS_MODULE=$(echo $secrets | jq -r '.DJANGO_SETTINGS_MODULE')
 export DJANGO_SUPERUSER_PASSWORD=$(echo $secrets | jq -r '.DJANGO_SUPERUSER_PASSWORD')
@@ -90,6 +91,7 @@ export COLLABORATION_WS_URL=$(echo $secrets | jq -r '.COLLABORATION_WS_URL')
 export FRONTEND_THEME=$(echo $secrets | jq -r '.FRONTEND_THEME')
 export FRONTEND_HOMEPAGE_FEATURE_ENABLED=$(echo $secrets | jq -r '.FRONTEND_HOMEPAGE_FEATURE_ENABLED')
 
+export REDIS_URL=$(echo $secrets | jq -r '.REDIS_URL')
 
 printenv
 
