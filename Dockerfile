@@ -86,13 +86,14 @@ RUN wget https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types
 # Copy entrypoint
 COPY ./docker/files/usr/local/bin/entrypoint /usr/local/bin/entrypoint
 
-# Make the entrypoint script executable
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
 # Give the "root" group the same permissions as the "root" user on /etc/passwd
 # to allow a user belonging to the root group to add new users; typically the
 # docker user (see entrypoint).
 RUN chmod g=u /etc/passwd
+
+# Make the entrypoint script executable
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 
 # Copy installed python dependencies
 COPY --from=back-builder /install /usr/local
