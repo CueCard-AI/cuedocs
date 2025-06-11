@@ -36,7 +36,8 @@ COPY ./src/frontend/servers/y-provider/package.json ./servers/y-provider/package
 WORKDIR /home/frontend/servers/y-provider
 
 RUN apk add \
-  aws-cli
+  aws-cli \
+  jq
 
 COPY --from=y-provider-builder \
     /home/frontend/servers/y-provider/dist \

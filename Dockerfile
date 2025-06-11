@@ -79,7 +79,8 @@ RUN apk add \
   libffi-dev \
   pango \
   shared-mime-info \
-  aws-cli
+  aws-cli \
+  jq
 
 RUN wget https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types -O /etc/mime.types
 
