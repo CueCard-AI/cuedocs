@@ -159,6 +159,13 @@ COPY docker/files/usr/local/etc/gunicorn/impress.py /usr/local/etc/gunicorn/impr
 
 # Un-privileged user running the application
 ARG DOCKER_USER
+
+# --- FIX: Add this line ---
+# Change ownership of the app directory to the runtime user before switching to it.
+# This allows the application to write necessary files (like .aws config) at runtime.
+RUN chown -R ${DOCKER_USER}:${DOCKER_USER} /app
+
+# Switch to the non-privileged user
 USER ${DOCKER_USER}
 
 # Copy statics
