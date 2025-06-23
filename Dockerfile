@@ -67,6 +67,9 @@ RUN rdfind -makesymlinks true -followsymlinks true -makeresultsfile false ${IMPR
 FROM base AS core
 
 ENV PYTHONUNBUFFERED=1
+# Set the user's home directory to the working directory.
+# This is where config files like .aws will be written.
+ENV HOME=/app
 
 # Install required system libs
 RUN apk add --no-cache \
